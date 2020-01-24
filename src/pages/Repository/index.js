@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
-import { FaArrowLeft } from 'react-icons/fa';
+import { FaArrowLeft, FaForward, FaBackward } from 'react-icons/fa';
 import api from '../../services/api';
 
-import { Loading, Owner, IssueList } from './styles';
+import { Loading, Owner, IssueList, Footer } from './styles';
 import Container from '../../components/Container/index';
 
 export default class Repository extends Component {
@@ -20,10 +20,14 @@ export default class Repository extends Component {
     repository: {},
     issues: [],
     loading: true,
+    state: 'all',
+    page: 1,
   };
 
   async componentDidMount() {
     const { match } = this.props;
+
+    const { state } = this.state;
 
     const repoName = decodeURIComponent(match.params.repository);
 
@@ -31,7 +35,7 @@ export default class Repository extends Component {
       api.get(`/repos/${repoName}`),
       api.get(`/repos/${repoName}/issues`, {
         params: {
-          state: 'open',
+          state,
           per_page: 5,
         },
       }),
@@ -44,8 +48,35 @@ export default class Repository extends Component {
     });
   }
 
+  handleStatus = e => {
+    const state = e.target.value.toLowerCase();
+
+    this.setState({ state });
+
+    this.handleIssueUpdate();
+  };
+
+  handlePage = page => {
+    this.setState({ page });
+
+    this.handleIssueUpdate();
+  };
+
+  handleIssueUpdate = async () => {
+    const { repository, state, page } = this.state;
+    const issues = await api.get(`/repos/${repository.full_name}/issues`, {
+      params: {
+        state,
+        per_page: 5,
+        page,
+      },
+    });
+
+    this.setState({ issues: issues.data });
+  };
+
   render() {
-    const { repository, issues, loading } = this.state;
+    const { repository, issues, loading, page } = this.state;
 
     if (loading) {
       return <Loading>Carregando</Loading>;
@@ -63,6 +94,12 @@ export default class Repository extends Component {
         </Owner>
 
         <IssueList>
+          <select onChange={this.handleStatus}>
+            <option>All</option>
+            <option>Open</option>
+            <option>Close</option>
+          </select>
+
           {issues.map(issue => (
             <li key={String(issue.id)}>
               <img src={issue.user.avatar_url} alt={issue.user.login} />
@@ -78,6 +115,21 @@ export default class Repository extends Component {
             </li>
           ))}
         </IssueList>
+        <Footer>
+          {page === 1 ? (
+            <button type="submit" disabled>
+              <FaBackward color="white" />
+            </button>
+          ) : (
+            <button type="submit" onClick={() => this.handlePage(page - 1)}>
+              <FaBackward color="white" name="down" />
+            </button>
+          )}
+
+          <button type="submit" onClick={() => this.handlePage(page + 1)}>
+            <FaForward color="white" />
+          </button>
+        </Footer>
       </Container>
     );
   }

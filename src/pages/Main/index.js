@@ -12,6 +12,7 @@ export default class Main extends Component {
     newRepo: '',
     repositories: [],
     loading: false,
+    fail: false,
   };
 
   componentDidMount() {
@@ -40,21 +41,39 @@ export default class Main extends Component {
 
     const { newRepo, repositories } = this.state;
 
-    const response = await api.get(`/repos/${newRepo}`);
+    let data;
+    let fail = false;
 
-    const data = {
-      name: response.data.full_name,
-    };
+    const exists = repositories.find(value => value.name === newRepo);
 
-    this.setState({
-      repositories: [...repositories, data],
-      newRepo: '',
-      loading: false,
-    });
+    try {
+      if (exists) {
+        throw new Error('Repositório duplicado');
+      }
+
+      const response = await api.get(`/repos/${newRepo}`);
+
+      data = [
+        ...repositories,
+        {
+          name: response.data.full_name,
+        },
+      ];
+    } catch (error) {
+      fail = true;
+      data = repositories;
+    } finally {
+      this.setState({
+        repositories: data,
+        newRepo: '',
+        loading: false,
+        fail,
+      });
+    }
   };
 
   render() {
-    const { newRepo, repositories, loading } = this.state;
+    const { newRepo, repositories, loading, fail } = this.state;
 
     return (
       <Container>
@@ -62,7 +81,7 @@ export default class Main extends Component {
           <FaGithubAlt />
           Repositórios
         </h1>
-        <Form onSubmit={this.handleSubmit}>
+        <Form onSubmit={this.handleSubmit} fail={fail}>
           <input
             type="text"
             placeholder="Adicionar repositório"
@@ -79,14 +98,19 @@ export default class Main extends Component {
           </SubmitButton>
         </Form>
         <List>
-          {repositories.map(repository => (
-            <li key={repository.name}>
-              <span>{repository.name}</span>
-              <Link to={`/repository/${encodeURIComponent(repository.name)}`}>
-                Detalhes
-              </Link>
-            </li>
-          ))}
+          {repositories.map(
+            repository =>
+              repository.name && (
+                <li key={repository.name}>
+                  <span>{repository.name}</span>
+                  <Link
+                    to={`/repository/${encodeURIComponent(repository.name)}`}
+                  >
+                    Detalhes
+                  </Link>
+                </li>
+              )
+          )}
         </List>
       </Container>
     );

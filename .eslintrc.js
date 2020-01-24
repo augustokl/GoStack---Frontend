@@ -22,6 +22,6 @@ module.exports = {
     'react/jsx-filename-extension': ['warn', { extensions: ['.jsx', '.js'] }],
     'import/prefer-default-export': 'off',
     'react/state-in-constructor': [2, 'never'],
-    'react/static-property-placement': [2],
+    'react/static-property-placement': [0],
   },
 };
